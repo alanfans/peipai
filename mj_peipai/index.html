@@ -1,0 +1,285 @@
+<html>
+    <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script type="text/ecmascript" src="md5.js"></script>
+	<script type="text/ecmascript" src="base64.js"></script>
+    <script type="text/javascript">
+		String.prototype.format = function(args) { 
+			if (arguments.length>0) { 
+			var result = this; 
+			if (arguments.length == 1 && typeof (args) == "object") { 
+			for (var key in args) { 
+			var reg=new RegExp ("({"+key+"})","g"); 
+			result = result.replace(reg, args[key]); 
+			} 
+			} 
+			else { 
+			for (var i = 0; i < arguments.length; i++) { 
+			if(arguments[i]==undefined) 
+			{ 
+			return ""; 
+			} 
+			else 
+			{ 
+			var reg=new RegExp ("({["+i+"]})","g"); 
+			result = result.replace(reg, arguments[i]); 
+			} 
+			} 
+			} 
+			return result; 
+			} 
+			else { 
+			return this; 
+			}
+		}
+
+		var wall = new Array()
+		for(var i=1;i<=34;i++){
+		    wall.push(i)
+			wall.push(i)
+			wall.push(i)
+			wall.push(i)
+		}
+		for(var i=35;i<=42;i++){
+		    wall.push(i)
+		}
+		var value_array = [3,4,5,6,7,8,9,10,11,12,13,1,2,14,15]
+
+		var cur_player = 1
+		
+	    var player_cards = new Array(new Array(), new Array(), new Array(), new Array(), new Array());
+
+		function showWall(){
+			for(var i=1;i<=144;i++) {
+			    document.getElementById("wall_card_" + i).src = ""
+				document.getElementById("wall_card_" + i).style.visibility = "hidden"
+			}
+			for(var i=1;i<=wall.length;i++){
+			    document.getElementById("wall_card_" + i).src = getCardImg(wall[i-1])
+				document.getElementById("wall_card_" + i).style.visibility="visible"
+			}
+		}
+
+	    function showCards(player_index){
+		    for(var i=1;i<=13;i++){
+			    document.getElementById("player" + player_index +"_card_" + i).src = ""
+				document.getElementById("player" + player_index +"_card_" + i).style.visibility = "hidden"
+			}
+		    for(var i=1;i<=player_cards[player_index].length;i++){
+			    document.getElementById("player" + player_index +"_card_" + i).src = getCardImg(player_cards[player_index][i-1])
+				document.getElementById("player" + player_index +"_card_" + i).style.visibility="visible"
+			}
+		}
+
+		var last_index = -1
+		var change_wall = false
+		function changeWall(index){
+		    if(last_index < 0){
+			    last_index = index
+				return
+			}
+			var tmp = wall[last_index-1]
+			wall[last_index-1] = wall[index-1]
+			wall[index-1] = tmp
+			last_index = -1
+			showWall()
+		}
+		
+		function changeWallState(){
+		    change_wall = true
+			last_index = -1
+		}
+		
+		function onclickCard(index){
+		    // 调整牌墙状态
+			if(change_wall==true){
+			    changeWall(index)
+				return
+			}
+		    if(cur_player >= 1 && player_cards[cur_player].length >= 13){
+			    alert("玩家牌不能超过13张")
+				return
+			}
+			var card = wall[index-1]
+		    player_cards[cur_player].push(card)
+			player_cards[cur_player].sort(function(a, b){
+			    if (a < b) return -1;
+				if (a > b) return 1;
+				return 0;
+			});
+		    showCards(cur_player)
+			// 牌墙删除牌
+			for(var i=0;i<wall.length;i++){
+			    if(wall[i]==card){
+				    wall.splice(i, 1)
+					break
+				}
+			}
+			showWall()
+		}
+		
+		function onDelCard(player, i){
+		    i = i - 1
+            wall.push(player_cards[player][i])
+			showWall()
+		    player_cards[player].splice(i, 1)
+		    showCards(player)
+		}
+		
+		function onSelectPlayer(i){
+		    change_wall = false
+		    cur_player = i
+		}
+		
+		function onClearPlayerCards(player){
+		    for(var i=0;i<player_cards[player].length;i++){
+			    wall.push(player_cards[player][i])
+			}
+		    showWall()
+		    player_cards[player] = new Array()
+			showCards(player)
+			cur_player = player
+		}
+	
+	    function getCardImg(card){
+			var pic = "mj/{0}.png".format(card)
+			return pic
+		}
+		
+		function sendToServer(){
+			var base64 = new Base64();
+			var data = base64.encode(getJson());
+			window.open("http://localhost/peipai?data="+data)
+			
+			/*httpRequest = new XMLHttpRequest();
+			httpRequest.setRequestHeader("Accept","application/json"); 
+			httpRequest.onreadystatechange = handleResponse;
+			httpRequest.open("GET", "http://localhost:5000/peipai?data="+data+"&sign="+sign);
+			httpRequest.send(null);*/
+			
+		}
+		
+		function handleResponse(e) {
+			if (e.target.readyState == XMLHttpRequest.DONE && httpRequest.status == 200){
+				alert("html请求返回" + httpRequest.responseText)
+				document.getElementById("result").innerHTML = httpRequest.responseText;
+				var responseTextJson = JSON.parse(e.target.responseText);
+			}
+		}
+		
+		function getJson(){
+			var pai = new Map()
+			pai["roomid"] = parseInt(document.getElementById("roomid").value)
+			pai["player1"] = player_cards[1]
+			pai["player2"] = player_cards[2]
+			pai["player3"] = player_cards[3]
+			pai["player4"] = player_cards[4]
+			pai["wall"] = wall
+			var str = JSON.stringify(pai)
+			return str
+		}
+		
+		function removeCards(card, n){
+			var index = -1
+			for(var i=0;i<wall.length;i++){
+			    if(wall[i] == card){
+				    index = i
+					break
+				}
+			}
+			if(index > 0){
+				wall.splice(index, n)
+				showWall()
+			}
+		}
+	</script>
+	</head>
+	<body>
+		<table align='left'>
+			<tr>
+			<script>
+			    for(var i=0;i<6;i++){
+				    document.write("<tr>")
+					for (var j=1;j<=24;j++)
+					{
+						var str = "<td><div style='position:relative;'><img id='wall_card_{0}' src='mj/{1}.png' onclick='onclickCard({0})' /></td>"
+						document.write(str.format(i*24+j, wall[i*24+j-1]));
+					}
+					document.write("</tr>")
+				}
+						
+			</script>
+			</tr>
+		</table>
+		<br>
+		<table>
+		    <tr>
+				
+				<td>输入房间号: </td>
+				<td><input type='text' id='roomid'/></td>
+				<td><input type='button' onclick='sendToServer()' value='发送到服务器'/></td>
+				<td><input type='button' onclick='removeCards(10, 36)' value='去除筒'/></td>
+				<td><input type='button' onclick='removeCards(19, 36)' value='去除条'/></td>
+				<td><input type='button' onclick='removeCards(28, 16)' value='去除东南西北'/></td>
+				<td><input type='button' onclick='removeCards(32, 12)' value='去除中发白'/></td>
+				<td><input type='button' onclick='removeCards(35, 8)' value='去除花牌'/></td>
+				<td><input type='button' onclick='changeWallState()' value='调整牌墙'/></td>
+			</tr>
+			<tr>
+			    <td><label id="result"/><td>
+			</tr>
+		</table>
+		<div style='position:absolute;z-index:1;left:30px;top:460px;'>
+		    <label>玩家1牌</label>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="设置玩家1牌" onclick='onSelectPlayer(1)'/>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="清空玩家1牌" onclick='onClearPlayerCards(1)'/>
+		</div>
+		<script>
+			for (var i=1;i<=13;i++)
+			{
+			    var str = "<div style='position:absolute;z-index:{0};left:{1}px;top:{2}px;visibility:hidden'><img id='player1_card_{0}'  onclick='onDelCard(1, {0})'></div>";
+				var result = str.format(i, i*50-20, 490);
+				document.write(result);
+			}
+		</script>
+		<div style='position:absolute;z-index:1;left:30px;top:580px;'>
+		    <label>玩家2牌</label>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="设置玩家2"  onclick='onSelectPlayer(2)'/>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="清空玩家2牌"  onclick='onClearPlayerCards(2)'/>
+		</div>
+		<script>
+			for (var i=1;i<=13;i++)
+			{
+			    var str = "<div style='position:absolute;z-index:{0};left:{1}px;top:{2}px;visibility:hidden'><img id='player2_card_{0}'  onclick='onDelCard(2, {0})'></div>";
+				var result = str.format(i, i*50-20, 490+120);
+				document.write(result);
+			}
+		</script>
+		<div style='position:absolute;z-index:1;left:30px;top:700px;'>
+		    <label>玩家3牌</label>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="设置玩家3牌"  onclick='onSelectPlayer(3)'/>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="清空玩家3牌"  onclick='onClearPlayerCards(3)'/>
+		</div>
+		<script>
+			for (var i=1;i<=13;i++)
+			{
+			    var str = "<div style='position:absolute;z-index:{0};left:{1}px;top:{2}px;visibility:hidden'><img id='player3_card_{0}'  onclick='onDelCard(3, {0})'></div>";
+				var result = str.format(i, i*50-20, 490+240);
+				document.write(result);
+			}
+		</script>
+		<div style='position:absolute;z-index:1;left:30px;top:820px;'>
+		    <label>玩家4牌</label>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="设置玩家4牌"  onclick='onSelectPlayer(4)'/>&nbsp&nbsp&nbsp&nbsp
+			<input type='button' width='150' height='70' value="清空玩家4牌"  onclick='onClearPlayerCards(4)'/>
+		</div>
+		<script>
+			for (var i=1;i<=13;i++)
+			{
+			    var str = "<div style='position:absolute;z-index:{0};left:{1}px;top:{2}px;visibility:hidden'><img id='player4_card_{0}'  onclick='onDelCard(4, {0})'></div>";
+				var result = str.format(i, i*50-20, 490+360);
+				document.write(result);
+			}
+		</script>
+	</body>
+</html>
